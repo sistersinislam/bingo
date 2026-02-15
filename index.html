@@ -270,11 +270,6 @@ body::before {
 
 .form-group input::placeholder { color: var(--white-muted); }
 
-/* Date input styling */
-.form-group input[type="date"] {
-  -webkit-appearance: none;
-  color-scheme: dark;
-}
 
 .btn {
   display: inline-flex;
@@ -816,7 +811,7 @@ body::before {
   <div class="screen" id="loginScreen">
     <div class="login-card">
       <h2>Assalamu Alaikum! 👋</h2>
-      <p class="login-sub">Enter your info to join the game</p>
+      <p class="login-sub">Enter your info to join tonight's game</p>
 
       <div class="collision-notice" id="collisionNotice">
         Someone already has that name! Please enter more letters of your last name so we can tell you apart.
@@ -831,8 +826,8 @@ body::before {
         <input type="text" id="loginLast" placeholder="e.g. S" autocomplete="off" autocapitalize="characters">
       </div>
       <div class="form-group">
-        <label for="loginDob">Date of Birth</label>
-        <input type="date" id="loginDob">
+        <label>Today's Date</label>
+        <input type="text" id="loginDate" readonly style="opacity:0.6;cursor:default;">
       </div>
 
       <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">Join Game ✨</button>
@@ -932,7 +927,7 @@ body::before {
     </div>
   </div>
 
-  <footer class="app-footer">Sisters Qiyaam Bingo · v1.0.1</footer>
+  <footer class="app-footer">Sisters Qiyaam Bingo · v1.2.0</footer>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -993,13 +988,12 @@ const SQUARES = [
 const FREE_SPACE = "Girls Qiyaam 2026";
 const ADMIN_FIRST = "Fazena";
 const ADMIN_LAST = "B";
-const ADMIN_DOB = "2011-01-01";
 const TIMER_SECONDS = 600; // 10 minutes
 
 /* ═══════════════════════════════════════════
    STATE
    ═══════════════════════════════════════════ */
-let currentPlayer = null; // { id, firstName, lastInitials, dob, board, filledSquares, filledCount }
+let currentPlayer = null; // { id, firstName, lastInitials, eventDate, board, filledSquares, filledCount }
 let isAdmin = false;
 let selectedCellIndex = null;
 let unsubscribers = [];
@@ -1022,8 +1016,8 @@ function showScreen(id) {
   if (el) el.classList.add('active');
 }
 
-function generatePlayerId(first, lastInitials, dob) {
-  return `${first.trim().toLowerCase()}_${lastInitials.trim().toLowerCase()}_${dob}`;
+function generatePlayerId(first, lastInitials, eventDate) {
+  return `${first.trim().toLowerCase()}_${lastInitials.trim().toLowerCase()}_${eventDate}`;
 }
 
 function shuffleArray(arr) {
@@ -1067,7 +1061,6 @@ function logout() {
   document.getElementById('globalTimerBar').classList.remove('visible');
   document.getElementById('loginFirst').value = '';
   document.getElementById('loginLast').value = '';
-  document.getElementById('loginDob').value = '';
   document.getElementById('loginError').textContent = '';
   document.getElementById('collisionNotice').classList.remove('visible');
   document.getElementById('loginLastLabel').textContent = 'Last Name Initial';
@@ -1082,11 +1075,12 @@ let collisionRetryCount = 0;
 async function handleLogin() {
   const first = document.getElementById('loginFirst').value.trim();
   const lastRaw = document.getElementById('loginLast').value.trim();
-  const dob = document.getElementById('loginDob').value;
+  const today = new Date();
+  const eventDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   const errorEl = document.getElementById('loginError');
 
-  if (!first || !lastRaw || !dob) {
-    errorEl.textContent = 'Please fill in all fields.';
+  if (!first || !lastRaw) {
+    errorEl.textContent = 'Please fill in your name.';
     return;
   }
 
@@ -1096,16 +1090,17 @@ async function handleLogin() {
 
   try {
     // Check admin
-    if (first === ADMIN_FIRST && lastInitials === ADMIN_LAST && dob === ADMIN_DOB) {
+    if (first === ADMIN_FIRST && lastInitials === ADMIN_LAST) {
       isAdmin = true;
       sessionStorage.setItem('bingo_player_id', '__admin__');
+      sessionStorage.setItem('bingo_event_date', eventDate);
       document.getElementById('loginBtn').disabled = false;
       showScreen('adminScreen');
       initAdmin();
       return;
     }
 
-    const playerId = generatePlayerId(first, lastInitials, dob);
+    const playerId = generatePlayerId(first, lastInitials, eventDate);
     const docRef = db.collection('players').doc(playerId);
     const doc = await docRef.get();
 
@@ -1114,6 +1109,7 @@ async function handleLogin() {
       currentPlayer = doc.data();
       currentPlayer.id = playerId;
       sessionStorage.setItem('bingo_player_id', playerId);
+    sessionStorage.setItem('bingo_event_date', eventDate);
       document.getElementById('loginBtn').disabled = false;
       showScreen('boardScreen');
       initBoard();
@@ -1121,13 +1117,13 @@ async function handleLogin() {
     }
 
     // Check for collision — someone else with similar base key
-    // Actually since the key is unique by first+last+dob, a non-existing doc means fresh player
-    // But we should check if someone with same first + single initial + dob exists (collision scenario)
+    // Actually since the key is unique by first+last+eventDate, a non-existing doc means fresh player
+    // But we should check if someone with same first + single initial + eventDate exists (collision scenario)
     if (lastInitials.length === 1) {
-      // Check if there's already a player with this first + initial + dob
+      // Check if there's already a player with this first + initial + eventDate
       const existingSnap = await db.collection('players')
         .where('firstName', '==', first)
-        .where('dob', '==', dob)
+        .where('eventDate', '==', eventDate)
         .get();
 
       if (!existingSnap.empty) {
@@ -1148,7 +1144,7 @@ async function handleLogin() {
     const newPlayer = {
       firstName: first,
       lastInitials: lastInitials,
-      dob: dob,
+      eventDate: eventDate,
       board: board,
       filledSquares: {},
       filledCount: 1 // free space counts
@@ -1164,6 +1160,7 @@ async function handleLogin() {
 
     currentPlayer = { ...newPlayer, id: playerId };
     sessionStorage.setItem('bingo_player_id', playerId);
+    sessionStorage.setItem('bingo_event_date', eventDate);
     document.getElementById('loginBtn').disabled = false;
     collisionRetryCount = 0;
     document.getElementById('collisionNotice').classList.remove('visible');
@@ -1398,8 +1395,12 @@ function startAdminListeners() {
   unsubscribers.push(unsub1);
 
   // Listen to all players
-  const unsub2 = db.collection('players').orderBy('filledCount', 'desc').onSnapshot(snap => {
-    renderLeaderboard(snap.docs);
+  const now = new Date();
+  const fallbackDate = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const eventDate = sessionStorage.getItem('bingo_event_date') || fallbackDate;
+  const unsub2 = db.collection('players').where('eventDate', '==', eventDate).onSnapshot(snap => {
+    const sorted = snap.docs.slice().sort((a, b) => (b.data().filledCount || 0) - (a.data().filledCount || 0));
+    renderLeaderboard(sorted);
   });
   unsubscribers.push(unsub2);
 }
@@ -1612,11 +1613,18 @@ async function init() {
 }
 
 // Also listen for Enter key on login inputs
-document.querySelectorAll('#loginScreen input').forEach(input => {
+document.querySelectorAll('#loginScreen input:not([readonly])').forEach(input => {
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleLogin();
   });
 });
+
+// Set today's date display
+function setTodayDisplay() {
+  const today = new Date();
+  document.getElementById('loginDate').value = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+setTodayDisplay();
 
 // Close modal on overlay click
 document.getElementById('squareModal').addEventListener('click', (e) => {
