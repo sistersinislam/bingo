@@ -25,7 +25,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(1.5px 
 .app-header{text-align:center;padding:20px 0 12px}
 .app-header h1{font-family:var(--font-display);font-size:clamp(1.3rem,5vw,1.8rem);font-weight:800;color:var(--gold-light);text-shadow:0 0 20px var(--gold-glow);letter-spacing:.5px;line-height:1.2}
 .app-header .subtitle{font-size:clamp(.7rem,2.5vw,.85rem);color:var(--white-muted);margin-top:4px;letter-spacing:2px;text-transform:uppercase}
-.timer-bar{display:none;align-items:center;justify-content:center;gap:10px;padding:10px 16px;margin-bottom:12px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius);backdrop-filter:blur(10px)}
+.timer-bar{display:none;align-items:center;justify-content:center;gap:10px;padding:10px 16px;background:rgba(17,22,56,.95);border:1px solid var(--card-border);border-radius:0 0 var(--radius) var(--radius);backdrop-filter:blur(10px);position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;z-index:50}
 .timer-bar.visible{display:flex}
 .timer-bar .timer-display{font-family:var(--font-display);font-size:clamp(1.2rem,4vw,1.6rem);font-weight:700;color:var(--gold-light);letter-spacing:2px;min-width:80px;text-align:center}
 .timer-bar .timer-label{font-size:.75rem;color:var(--white-muted);text-transform:uppercase;letter-spacing:1px}
@@ -215,7 +215,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(1.5px 
     <div class="form-group"><label for="modalLastName">Last Name</label><input type="text" id="modalLastName" placeholder="e.g. Khan" autocomplete="off" autocapitalize="words"></div>
     <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitSquare()">Submit &#10003;</button></div>
   </div></div>
-  <footer class="app-footer">Sisters Qiyaam Bingo &middot; v3.0.0</footer>
+  <footer class="app-footer">Sisters Qiyaam Bingo &middot; v3.5.0</footer>
 </div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -225,7 +225,7 @@ var db=firebase.firestore();
 
 var DEFAULT_SQUARES=["Plays a sport","Has made a Ramadan goal for herself this year","Has a pet","Has a water bottle with them","Prayed taraweeh earlier tonight","Listens to podcasts","Has an Islamic app on her phone","Is wearing contacts","Has a sweet tooth","Has attended a Family Hike before","Moved to DFW less than 5 years ago","Can speak more than 1 language","Ate suhoor this morning","Is wearing your favorite color hijab","Born in the same month as you","Has lived in more than one state","Loves matcha","Loves savory or salty snacks","Crochets, knits, or sews","Has lost her hijab pin or magnet before","Has the same favorite color as you","Is attending her first Qiyaam","Goes to the same school as you","Wears the same shoe size as you"];
 var FREE_SPACE="Girls Qiyaam 2026",ADMIN_FIRST="fazena",ADMIN_LAST_START="b",TIMER_SECONDS=600;
-var LOBBY_MESSAGES=["Get ready to mingle!","Don\u2019t be afraid to meet new sisters!","Making new friends is fun!","Step outside your comfort zone!","Say salaam to someone new!","You might meet your new best friend tonight!","Smile \u2014 it\u2019s charity!","The best gatherings are of dhikr and community"];
+var LOBBY_MESSAGES=["Get ready to mingle!","Don\u2019t be afraid to meet new sisters!","Making new friends is sunnah!","Step outside your comfort zone!","Say salaam to someone new!","You might meet your new best friend tonight!","Smile \u2014 it\u2019s charity!","The best gatherings are of dhikr and community"];
 
 function getTodayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function getTodayDisplay(){return new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
@@ -421,7 +421,7 @@ async function submitFeedback(){
   var payload={eventDate:currentEventDate,rating:selectedRating,text:text,timestamp:Date.now(),anonymous:anon};
   if(anon){payload.firstName='Anonymous';payload.lastName=''}
   else{payload.firstName=currentPlayer.firstName;payload.lastName=currentPlayer.lastName}
-  try{await db.collection('feedback').doc(currentPlayer.id).set(payload);document.getElementById('feedbackThanks').classList.remove('hidden');document.getElementById('feedbackSubmitBtn').disabled=true}
+  try{await db.collection('feedback').doc(currentPlayer.id).set(payload);document.getElementById('feedbackThanks').classList.remove('hidden');document.getElementById('feedbackSubmitBtn').disabled=true;document.getElementById('feedbackThanks').scrollIntoView({behavior:'smooth',block:'center'})}
   catch(err){console.error('Feedback error:',err);alert('Could not submit. Please try again.')}
 }
 
@@ -470,7 +470,7 @@ function renderLeaderboard(docs){
     if(d.winner)winners.push(d.firstName+' '+d.lastName);
     html+='<li class="leaderboard-item'+(d.winner?' lb-winner':'')+'"><span class="lb-rank '+rc+'">'+rank+'</span><span class="lb-name">'+escapeHtml(d.firstName)+' '+escapeHtml(d.lastName)+'</span><span class="lb-count">'+(d.filledCount||0)+'</span></li>'});
   list.innerHTML=html;
-  if(winners.length){winAlert.classList.add('visible');winNames.textContent=winners.join(', ')}else{winAlert.classList.remove('visible')}
+  if(winners.length){winAlert.classList.add('visible');winNames.textContent=winners.join(', ');winAlert.scrollIntoView({behavior:'smooth',block:'start'})}else{winAlert.classList.remove('visible')}
 }
 function renderAdminFeedback(docs){
   var c=document.getElementById('adminFeedbackList');
